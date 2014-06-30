@@ -28,3 +28,5 @@ vhard2 = "..3...59...2.89...............3926...........4.8..7......9..8......6..
 for g in [grid1, grid2, hard1, vhard1, vhard2]
     @test is_solved(solve(g))
 end
+
+bench()

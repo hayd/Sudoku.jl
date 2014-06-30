@@ -163,7 +163,7 @@ function time_solve(grid, showif)
     if t > showif
         println("$(round(t, 2)) seconds:")
         println(grid)
-        show(val)
+        val == false ? println("No solutions") : show(val)
     end
     solved = val != false && is_solved(val)
     t, solved
@@ -209,15 +209,20 @@ function random_puzzle(N::Integer=17)
     return random_puzzle(N) ## Give up and make a new puzzle
 end
 
+grid1 = "003020600900305001001806400008102900700000008006708200002609500800203009005010300"
+
 function bench()
     examples = joinpath(splitdir(dirname(@__FILE__()))[1], "examples")
+
+    solve(grid1)  #warm up
+
     solve_all(from_file(joinpath(examples, "easy50.txt"), "========"), name="easy")
-    solve_all(from_file(joinpath(examples, "top95.txt")), name="hard")
+    solve_all(from_file(joinpath(examples, "top95.txt")), name="hard", showif=0.4)
     solve_all(from_file(joinpath(examples, "hardest.txt")), name="hardest")
-    bench(100);
+    bench(100, showif=1.0);
 end
-function bench(N::Integer=100)
-    solve_all([random_puzzle() for i=1:N], name="random", showif=0.03);
+function bench(N::Integer; showif=0.03)
+    solve_all([random_puzzle() for i=1:N], name="random", showif=showif);
 end
 
 end # module

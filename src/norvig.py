@@ -186,13 +186,27 @@ def random_puzzle(N=17):
 grid1  = '003020600900305001001806400008102900700000008006708200002609500800203009005010300'
 grid2  = '4.....8.5.3..........7......2.....6.....8.4......1.......6.3.7.5..2.....1.4......'
 hard1  = '.....6....59.....82....8....45........3........6..3.54...325..6..................'
-    
+
 if __name__ == '__main__':
     test()
-    solve_all(from_file("easy50.txt", '========'), "easy", None)
-    solve_all(from_file("top95.txt"), "hard", None)
-    solve_all(from_file("hardest.txt"), "hardest", None)
+    def path(fname):
+        from os.path import join, realpath, split
+        pkg_dir = split(split(realpath(__file__))[0])[0]
+        return join(pkg_dir, "examples", fname)
+    solve_all(from_file(path("easy50.txt"), '========'), "easy", None)
+    solve_all(from_file(path("top95.txt")), "hard", None)
+    solve_all(from_file(path("hardest.txt")), "hardest", None)
     solve_all([random_puzzle() for _ in range(99)], "random", 100.0)
+
+def map_times(grids):
+    from time import time
+    ts = []
+    for g in grids:
+        t1 = time()
+        res = solve(g)
+        t = time() - t1
+        ts.append(t if res else float('nan'))
+    return ts
 
 ## References used:
 ## http://www.scanraid.com/BasicStrategies.htm
