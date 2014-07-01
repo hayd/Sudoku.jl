@@ -1,13 +1,18 @@
 module Sudoku
 
-export Grid, PartialGrid, grid_values, bench, is_solved, parse_grid, peers, random_puzzle, solve, solve_all, units
+export GridInit, GridPartial,
+       grid_values, parse_grid,
+       peers, units,
+       is_solved, solve, solve_all,
+       random_puzzle,
+       bench
 
 
 import Iterators: chain, imap
 
 
-typealias Grid Dict{Int64,Char}
-typealias PartialGrid Dict{Int64,String}
+typealias GridInit Dict{Int64,Char}
+typealias GridPartial Dict{Int64,ASCIIString}
 
 
 # globals
@@ -20,19 +25,20 @@ subs = [squares[3*i-2:3*i, 3*j-2:3*j] for i=1:3, j=1:3]
 unitlist = collect(chain(rows, cols, subs))
 
 # exported globals
-units = {s => filter(u -> s in u, unitlist) for s=squares}
-peers = Dict{Int64, Set{Int64}}({s => Set(vcat(map(collect, units[s])...))
-                                 for s=squares})
+units = [s::Int64 => filter(u -> s in u, unitlist) for s=squares]
+peers = [s::Int64 => Set(vcat(map(collect, units[s])...))::Set{Int64}
+         for s=squares]
 for (i, p)=peers
     pop!(p, i)
 end
 
 # Convert grid to a dict of possible values, {square: digits}, or
 # return False if a contradiction is detected.
-function parse_grid(grid::Grid)
+function parse_grid(grid::GridInit)
     # To start, every square can be any digit;
     # then assign values from the grid.
-    vals = PartialGrid({s => digits_ for s=squares})
+    vals = [s::Int64 => Sudoku.digits_::ASCIIString
+            for s=Sudoku.squares]::GridPartial
     for (s,d)=grid
         if d in digits_ && assign!(vals, s, d) == false
             return false ## (Fail if we can't assign d to square s.)
@@ -42,20 +48,29 @@ function parse_grid(grid::Grid)
     return vals
 end
 function parse_grid(grid::String)
-    parse_grid(grid_values(grid))
+    parse_grid(grid_values(grid)::GridInit)
 end
 
 # Convert grid into a dict of {square: char} with '0' or '.' for empties.
 function grid_values(grid::String)
     chars = filter(c -> c in digits_ * "0.", grid)
     @assert length(chars) == 81
-    return Grid({s => c for (s,c)=zip(squares, chars)})
+    return [s::Int64 => c::Char for (s,c)=zip(squares, chars)]::GridInit
 end
 
 # Eliminate all the other values (except d) from values[s] and propagate.
 # Return values, except return False if a contradiction is detected.
 function assign!(vals, s::Int64, d::Char)
     other_vals = replace(vals[s], d, "")
+
+    # TODO why doesn't this work??
+    # for d2=other_vals
+    #     if eliminate!(vals, s, d2) == false
+    #         return false
+    #     end
+    # end
+    # return vals
+
     if all([eliminate!(vals, s, d2) != false for d2=other_vals])
         return vals
     else
@@ -76,8 +91,8 @@ function eliminate!(vals, s::Int64, d::Char)
         return false ## Contradiction: removed last value
     elseif length(vals[s]) == 1
         d2 = vals[s][1]
-        if !all([eliminate!(vals, s2, d2) != false for s2=peers[s]])
-            return false
+        for s2=peers[s]
+            eliminate!(vals, s2, d2) == false && return false
         end
     end
     ## (2) If a unit u is reduced to only one place for a value d, then put it there.
@@ -86,10 +101,8 @@ function eliminate!(vals, s::Int64, d::Char)
         if length(dplaces) == 0
             return false ## Contradiction: no place for this value
         elseif length(dplaces) == 1
-        # d can only be in one place in unit; assign it there
-            if assign!(vals, dplaces[1], d) == false
-                return false
-            end
+            # d can only be in one place in unit; assign it there
+            assign!(vals, dplaces[1], d) == false  && return false
         end
     end
     return vals
@@ -105,7 +118,7 @@ function center(text, width)
 end
 
 # Display these values as a 2-D grid.
-function Base.show(vals::PartialGrid)
+function Base.show(vals::GridPartial)
     # TODO don't override show for Dict{Int64, String}
     width = 1 + maximum([length(vals[s]) for s=squares])
     line = join(repeat(["-" ^ (width*3)], outer=[3]), "+")
@@ -120,16 +133,17 @@ function Base.show(vals::PartialGrid)
     println()
 end
 
-function solve(grid::PartialGrid)
+function solve(grid::GridPartial)
     search(grid)
 end
 function solve(grid::String)
-    solve(parse_grid(grid))
+    g = parse_grid(grid)
+    return (g == false) ? false : solve(g)
 end
 
 # Using depth-first search and propagation, try all possible values."
-function search(vals::PartialGrid)
-    poss = {length(v) => k for (k,v)=vals}
+function search(vals::GridPartial)
+    poss = [length(v)::Int64 => k::Int64 for (k,v)=vals]
     pop!(poss, 1, -1)
     if length(poss) == 0
         return vals  ## Solved!
@@ -150,11 +164,9 @@ function search(vals::Bool)
     return false
 end
 
-function is_solved(grid::PartialGrid)
-    maximum(map(length, values(grid))) == 1
+function is_solved(grid::GridPartial)
+    all(imap(x -> length(x) == 1, values(grid)))
 end
-
-#import time, random
 
 function time_solve(grid, showif)
     t0 = time()
@@ -196,11 +208,9 @@ end
 # Note the resulting puzzle is not guaranteed to be solvable, but empirically
 # about 99.8% of them are solvable. Some have multiple solutions.
 function random_puzzle(N::Integer=17)
-    vals = PartialGrid({s => digits_ for s=squares})
+    vals = GridPartial({s => digits_ for s=squares})
     for s=shuffle(collect(squares))
-        if assign!(vals, s, vals[s][rand(1:end)]) == false
-            break
-        end
+        assign!(vals, s, vals[s][rand(1:end)]) == false  && break
         ds = filter((s, v) -> length(v) == 1, vals)
         if length(ds) >= N && length(values(ds)) >= 8
             return join([length(vals[s])==1 ? vals[s] : "." for s=squares], "")

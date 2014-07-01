@@ -21,7 +21,7 @@ function map_time(f, arr)
     times
 end
 
-function compare_bench(N::Integer=100)
+function bench_compare(N::Integer=100)
     # Note: using pre-calculated arrays so generation is not benchmarked
     puzzles = [random_puzzle() for i=1:N]
     solve(puzzles[1])  # warm up
@@ -49,9 +49,10 @@ function compare_bench(N::Integer=100)
     @assert n == all(map(isnan, arr), 2)
     dropped = arr[!collect(n), :]
 
-    DataFrame(dropped, [:Julia, :JuMP, :Python])
+    df = convert(DataFrame, dropped)
+    names!(df, [:Julia, :JuMP, :Python])
+    return df
 end
-
 
 
 # vendorize for now...
@@ -97,3 +98,9 @@ function SolveModel(initgrid)
         return sol
     end
 end
+
+
+N = (length(ARGS) == 1) ? int(ARGS[1]) : 100
+println(bench_compare(N))
+
+# TODO more desciptive stats from result
