@@ -101,6 +101,9 @@ end
 
 
 N = (length(ARGS) == 1) ? int(ARGS[1]) : 100
-println(bench_compare(N))
+b = bench_compare(N)
+println(b)
+m = round(median(b[:Julia]) / median(b[:Python]) * 100 - 100, 1)
+println("Julia $m% slower than Python")
 
 # TODO more desciptive stats from result

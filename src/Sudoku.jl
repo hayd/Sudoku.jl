@@ -18,16 +18,16 @@ typealias GridPartial Dict{Int64,ASCIIString}
 # globals
 digits_ = "123456789"
 
-squares = reshape(1:81, 9, 9)
-rows = [squares[i, :] for i in 1:9]
-cols = [squares[:, i] for i in 1:9]
-subs = [squares[3*i-2:3*i, 3*j-2:3*j] for i=1:3, j=1:3]
-unitlist = collect(chain(rows, cols, subs))
+const squares = reshape(1:81, 9, 9)
+const rows = [squares[i, :] for i in 1:9]
+const cols = [squares[:, i] for i in 1:9]
+const subs = [squares[3*i-2:3*i, 3*j-2:3*j] for i=1:3, j=1:3]
+const unitlist = collect(chain(rows, cols, subs))
 
 # exported globals
-units = [s::Int64 => filter(u -> s in u, unitlist) for s=squares]
-peers = [s::Int64 => Set(vcat(map(collect, units[s])...))::Set{Int64}
-         for s=squares]
+const units = [s::Int64 => filter(u -> s in u, unitlist) for s=squares]
+const peers = [s::Int64 => Set(vcat(map(collect, units[s])...))::Set{Int64}
+               for s=squares]
 for (i, p)=peers
     pop!(p, i)
 end
@@ -148,6 +148,18 @@ function search(vals::GridPartial)
     if length(poss) == 0
         return vals  ## Solved!
     end
+
+    # TODO replace this dict impl with something like the following
+    # s, minL = 0, 99  # > 9, at most 9 digits
+    # for (k,v)=vals
+    #     L = length(v)
+    #     if 1 < L < minL
+    #         s, minL = k, L
+    #     end
+    # end
+    # if s == 0
+    #     return vals  ## Solved!
+    # end
 
     ## Chose the unfilled square s with the fewest possibilities
     s = minimum(poss)[2]
