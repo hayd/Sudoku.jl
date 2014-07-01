@@ -43,9 +43,13 @@ function compare_bench(N::Integer=100)
     #@time for j=j_puzzles SolveModel(j) end
     j_times = map_time(SolveModel, j_puzzles)
 
-    #TODO output in more usable form
-    #hcat(times, j_times, p_times)
-    DataFrame(hcat(times, j_times, p_times), [:Julia, :JuMP, :Python])
+    #TODO make this less awful... ffs NaN NA
+    arr = hcat(times, j_times, p_times)
+    n = any(map(isnan, arr), 2)
+    @assert n == all(map(isnan, arr), 2)
+    dropped = arr[!collect(n), :]
+
+    DataFrame(dropped, [:Julia, :JuMP, :Python])
 end
 
 
