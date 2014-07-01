@@ -202,10 +202,10 @@ function solve_all(grids; name="", showif=0.2)
     #times, results = zip([time_solve(grid, showif) for grid=grids]...)
     N = length(grids)
     if N > 1
-        t_mean = round(sum(times)/N, 2)
-        t_hz = round(N/sum(times), 2)
-        t_max = round(maximum(times), 2)
-        println("Solved $(sum(results)) of $N $name puzzles (avg $t_mean secs ($t_hz Hz), max $t_max secs).")
+        t_mean = round(sum(times)/N, 3)
+        t_hz = round(N/sum(times), 3)
+        t_max = round(maximum(times), 3)
+        println("Solved $(sum(results)) of $N $name puzzles (avg $(t_mean)s ($(t_hz)Hz), max $(t_max)s).")
     end
 end
 
