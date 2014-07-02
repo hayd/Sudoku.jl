@@ -99,8 +99,27 @@ function SolveModel(initgrid)
     end
 end
 
+# TODO not use my own bespoke describe function
+function impl_describe(df::DataFrame)
+    function q10(col)
+        quantile(col, 0.1)
+    end
+    function q90(col)
+        quantile(col, 0.9)
+    end
+    fns = [mean, minimum, q10, median, q90, maximum]
+    res = DataFrame(impl=[:Julia, :JuMP, :Python])
+    for f=fns
+        res[symbol(string(f))] = [f(col) for (cname,col)=eachcol(df)]
+    end
+    res
+end
+
 
 N = (length(ARGS) == 1) ? int(ARGS[1]) : 100
-println(bench_compare(N))
+b = bench_compare(N)
+s = impl_describe(b)
+println(s)
 
 # TODO more desciptive stats from result
+# TODO eg plot of sorted times?
