@@ -11,13 +11,11 @@ export GridInit, GridPartial,
 import Iterators: chain, imap
 
 
-typealias GridInit Dict{Int64,Char}
-typealias GridPartial Dict{Int64,ASCIIString}
+typealias GridInit Dict{Int64,Int64}
+typealias GridPartial Dict{Int64,BitArray{1}}
 
 
 # globals
-digits_ = "123456789"
-
 const squares = reshape(1:81, 9, 9)
 const rows = [squares[i, :] for i in 1:9]
 const cols = [squares[:, i] for i in 1:9]
@@ -37,10 +35,10 @@ end
 function parse_grid(grid::GridInit)
     # To start, every square can be any digit;
     # then assign values from the grid.
-    vals = [s::Int64 => Sudoku.digits_::ASCIIString
+    vals = [s::Int64 => trues(9)::BitArray{1}
             for s=Sudoku.squares]::GridPartial
     for (s,d)=grid
-        if d in digits_ && assign!(vals, s, d) == false
+        if d != 0 && assign!(vals, s, d) == false
             return false ## (Fail if we can't assign d to square s.)
             # TODO: remove type instability
         end
@@ -53,15 +51,24 @@ end
 
 # Convert grid into a dict of {square: char} with '0' or '.' for empties.
 function grid_values(grid::String)
-    chars = filter(c -> c in digits_ * "0.", grid)
+    chars = filter(c -> c in ".0123456789", grid)
+    chars = replace(chars, ".", "0")
+    # TODO do this in one pass?
     @assert length(chars) == 81
-    return [s::Int64 => c::Char for (s,c)=zip(squares, chars)]::GridInit
+    return [s::Int64 => parseint(c)::Int64
+            for (s,c)=zip(squares, chars)]::GridInit
 end
 
 # Eliminate all the other values (except d) from values[s] and propagate.
 # Return values, except return False if a contradiction is detected.
-function assign!(vals, s::Int64, d::Char)
-    other_vals = replace(vals[s], d, "")
+function assign!(vals, s::Int64, d::Int64)
+    other_vals = copy(vals[s])
+    other_vals[d] = false
+
+    # for d2=findin(other_vals, true)
+    #     eliminate!(vals, s, d2) == false && return false
+    # end
+    # return vals
 
     # TODO why doesn't this work??
     # for d2=other_vals
@@ -71,7 +78,8 @@ function assign!(vals, s::Int64, d::Char)
     # end
     # return vals
 
-    if all([eliminate!(vals, s, d2) != false for d2=other_vals])
+
+    if all([eliminate!(vals, s, d2) != false for d2=findin(other_vals, true)])
         return vals
     else
         return false
@@ -81,26 +89,28 @@ end
 
 # Eliminate d from values[s]; propagate when values or places <= 2.
 # Return values, except return False if a contradiction is detected.
-function eliminate!(vals, s::Int64, d::Char)
-    if !(d in vals[s])
+function eliminate!(vals, s::Int64, d::Int64)
+    if !(vals[s][d])
         return vals ## Already eliminated
     end
-    vals[s] = replace(vals[s], d, "")
+    vals[s][d] = false
     ## (1) If a square s is reduced to one value d2, then eliminate d2 from the peers.
-    if length(vals[s]) == 0
+    left = sum(vals[s])
+    if left == 0
         return false ## Contradiction: removed last value
-    elseif length(vals[s]) == 1
-        d2 = vals[s][1]
+    elseif left == 1
+        d2 = findfirst(vals[s])
         for s2=peers[s]
             eliminate!(vals, s2, d2) == false && return false
         end
     end
     ## (2) If a unit u is reduced to only one place for a value d, then put it there.
-    for u in units[s]
-        dplaces = filter(s -> d in vals[s], u)
-        if length(dplaces) == 0
+    for u=units[s]
+        dplaces = filter(s -> vals[s][d], u)
+        L = length(dplaces)
+        if L == 0
             return false ## Contradiction: no place for this value
-        elseif length(dplaces) == 1
+        elseif L == 1
             # d can only be in one place in unit; assign it there
             assign!(vals, dplaces[1], d) == false  && return false
         end
@@ -120,11 +130,16 @@ end
 # Display these values as a 2-D grid.
 function Base.show(vals::GridPartial)
     # TODO don't override show for Dict{Int64, String}
-    width = 1 + maximum([length(vals[s]) for s=squares])
+
+    function to_digits(ba::BitArray{1})
+        join(findin(ba, true), "")
+    end
+
+    width = 1 + maximum([sum(vals[s]) for s=squares])
     line = join(repeat(["-" ^ (width*3)], outer=[3]), "+")
     for (i,row)=enumerate(rows)
-        println(join([center(vals[s], width) * (j in [3, 6] ? "|" : "")
-                        for (j,s)=enumerate(row)],
+        println(join([center(to_digits(vals[s]), width) * (j in [3, 6] ? "|" : "")
+                      for (j,s)=enumerate(row)],
                      ""))
         if i in [3, 6]
             println(line)
@@ -138,12 +153,12 @@ function solve(grid::GridPartial)
 end
 function solve(grid::String)
     g = parse_grid(grid)
-    return (g == false) ? false : solve(g)
+    g != false && solve(g)
 end
 
 # Using depth-first search and propagation, try all possible values."
 function search(vals::GridPartial)
-    poss = [length(v)::Int64 => k::Int64 for (k,v)=vals]
+    poss = [sum(v)::Int64 => k::Int64 for (k,v)=vals]
     pop!(poss, 1, -1)
     if length(poss) == 0
         return vals  ## Solved!
@@ -163,8 +178,8 @@ function search(vals::GridPartial)
 
     ## Chose the unfilled square s with the fewest possibilities
     s = minimum(poss)[2]
-    for d=vals[s]
-        v = search(assign!(copy(vals), s, d))
+    for d=findin(vals[s], true)
+        v = search(assign!(deepcopy(vals), s, d))
         if v != false
             return v
         end
@@ -177,14 +192,14 @@ function search(vals::Bool)
 end
 
 function is_solved(grid::GridPartial)
-    all(imap(x -> length(x) == 1, values(grid)))
+    all(imap(x -> sum(x) == 1, values(grid)))
 end
 
 function time_solve(grid, showif)
     t0 = time()
     val = solve(grid)
     t = time() - t0
-    if t > showif
+    if false && t > showif  # TODO put back
         println("$(round(t, 2)) seconds:")
         println(grid)
         val == false ? println("No solutions") : show(val)
@@ -220,12 +235,12 @@ end
 # Note the resulting puzzle is not guaranteed to be solvable, but empirically
 # about 99.8% of them are solvable. Some have multiple solutions.
 function random_puzzle(N::Integer=17)
-    vals = GridPartial({s => digits_ for s=squares})
+    vals = [s => trues(9) for s=squares]::GridPartial
     for s=shuffle(collect(squares))
-        assign!(vals, s, vals[s][rand(1:end)]) == false  && break
-        ds = filter((s, v) -> length(v) == 1, vals)
+        assign!(vals, s, findin(vals[s], true)[rand(1:end)]) == false  && break
+        ds = filter((s, v) -> sum(v) == 1, vals)
         if length(ds) >= N && length(values(ds)) >= 8
-            return join([length(vals[s])==1 ? vals[s] : "." for s=squares], "")
+            return join([sum(vals[s])==1 ? string(findfirst(vals[s])) : "." for s=squares], "")
         end
     end
     return random_puzzle(N) ## Give up and make a new puzzle
