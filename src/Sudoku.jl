@@ -157,7 +157,7 @@ end
 # Using depth-first search and propagation, try all possible values."
 function search(vals::GridPartial)
 
-    s = 0
+    s = 0  # Choose the unfilled square s with the fewest possibilities
     min_l = 99
     all_one = true
     for i in 1:81
