@@ -161,7 +161,7 @@ function search(vals::GridPartial)
     min_l = 99
     all_one = true
     for i in 1:81
-        l = length(vals[i])
+        l = sum(vals[:, i])
         all_one &= l == 1
         if l <= min_l && l != 1
             min_l = l
@@ -191,7 +191,7 @@ function time_solve(grid, showif)
     t0 = time()
     val = solve(grid)
     t = time() - t0
-    if false && t > showif  # TODO put back
+    if t > showif  # TODO put back
         println("$(round(t, 2)) seconds:")
         println(grid)
         val == false ? println("No solutions") : show(val)
