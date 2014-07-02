@@ -157,26 +157,19 @@ end
 # Using depth-first search and propagation, try all possible values."
 function search(vals::GridPartial)
 
-    # TODO avoid using dict here, with something like:
-    # poss = sum(vals, 1)
-    # s, minp = 0, 99  # > 9, at most 9 digits
-    # for (s1, p)=enumerate(poss)
-    #     if 1 < p < minp
-    #         s, minp = s1, p
-    #     end
-    # end
-    # if s == 0
-    #     return vals  ## Solved!
-    # end
-
-    poss = [sum(vals[:, s])::Int64 =>s::Int64 for s=1:81]
-    pop!(poss, 1, -1)
-    if length(poss) == 0
-        return vals # solved!
+    s = 0
+    min_l = 99
+    all_one = true
+    for i in 1:81
+        l = length(vals[i])
+        all_one &= l == 1
+        if l <= min_l && l != 1
+            min_l = l
+            s = i
+        end
     end
-
-    ## Chose the unfilled square s with the fewest possibilities
-    s = minimum(poss)[2]
+    all_one && return vals  ## Solved
+    
     for d=findin(vals[:, s], true)
         v = search(assign!(copy(vals), s, d))
         if v != false
