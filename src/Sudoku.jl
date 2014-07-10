@@ -17,7 +17,7 @@ type SudokuPuzzle
 end
 sudoku(init::String) = SudokuPuzzle(init)
 # vals represents the possible entries (from 1 to 9 in 81 squares)
-# when initiatializing we propogate these values (across units)
+# when initiatializing we propagate these values (across units)
 # if vals is false, this means there was a contradition (no solutions).
 typealias MaybeVals Union(BitArray{2}, Bool)
 type SudokuPartial
@@ -25,13 +25,13 @@ type SudokuPartial
     puzzle::SudokuPuzzle
 
     SudokuPartial(vals::MaybeVals, puzzle::SudokuPuzzle) = new(vals, puzzle)
-    SudokuPartial(puzzle::SudokuPuzzle) = propogate(puzzle)
-    SudokuPartial(puzzle::String) = propogate(SudokuPuzzle(puzzle))
+    SudokuPartial(puzzle::SudokuPuzzle) = propagate(puzzle)
+    SudokuPartial(puzzle::String) = propagate(SudokuPuzzle(puzzle))
 end
 
 
 # globals
-const squares = reshape(1:81, 9, 9)
+const squares = reshape(1:81, 9, 9).'
 const rows = [squares[i, :] for i in 1:9]
 const cols = [squares[:, i] for i in 1:9]
 const subs = [squares[3*i-2:3*i, 3*j-2:3*j] for i=1:3, j=1:3]
@@ -47,17 +47,17 @@ end
 # Convert grid to a SudokuPartial of possible values, vals is a BitArray{2}
 # remove values already seen in a shared unit
 # return False if a contradiction is detected.
-function propogate(grid::SudokuPuzzle)
+function propagate(grid::SudokuPuzzle)
     vals = trues(9, 81)::MaybeVals
-    if !propogate!(grid, vals)
+    if !propagate!(grid, vals)
         vals = false::MaybeVals
     end
     SudokuPartial(vals::MaybeVals, grid)
 end
-function propogate(grid::String)
-    propogate(SudokuPuzzle(grid))
+function propagate(grid::String)
+    propagate(SudokuPuzzle(grid))
 end
-function propogate!(grid::SudokuPuzzle, vals::BitArray{2})
+function propagate!(grid::SudokuPuzzle, vals::BitArray{2})
     # To start, every square can be any digit;
     # then assign values from the grid.
     for (s,d)=enumerate(grid.init)
@@ -125,7 +125,7 @@ function solve!(g::SudokuPartial)
     g
 end
 function solve(p::SudokuPuzzle)
-    g = propogate(p)
+    g = propagate(p)
     g.vals != false && solve!(g)
     g
 end
@@ -147,7 +147,7 @@ function search!(vals::BitArray{2})
         end
     end
     all_one && return true  ## Solved
-    
+
     for d=findin(vals[:, s], true)
         v = copy(vals)
         if assign!(v, s, d) && search!(v)
