@@ -1,4 +1,4 @@
-include("_jump.jl")
+include("_jump.jl")  # if this fails, paste SolveModel from .julia/JuMP/examples/sudoku.jl
 
 using DataFrames
 using PyCall
@@ -22,37 +22,47 @@ function map_time(f, arr)
     times
 end
 
-function bench_compare(N::Integer=100)
-    # Note: using pre-calculated arrays so generation is not benchmarked
-    puzzles = [random_puzzle() for i=1:N]
+function bench_julia(puzzles::Vector{ASCIIString})
     solve(puzzles[1])  # warm up
-    times = map_time(solve, puzzles)
-
-    # TODO use pycall of norvig.py
+    map_time(solve, puzzles)
+end
+function bench_python(puzzles::Vector{ASCIIString})
     src_dir = splitdir(@__FILE__)[1]
     if !(src_dir in PyVector(pyimport("sys")["path"]))
         unshift!(PyVector(pyimport("sys")["path"]), src_dir)
     end
     @pyimport norvig
-    p_times = convert(Array{Float64}, norvig.map_times(puzzles))
-
-    j_puzzles = map(p -> reshape(map(x -> grid_values(p)[x], 1:81), 9, 9), puzzles)
+    convert(Array{Float64}, norvig.map_times(puzzles))
+end
+function bench_jump(puzzles::Vector{ASCIIString})
+    j_puzzles = map(p -> reshape(map(c -> c in "0." ? 0 : parseint(c), collect(p)),
+                                 9, 9),
+                    puzzles)
     SolveModel(j_puzzles[1])  # warm up
-    #@time for j=j_puzzles SolveModel(j) end
-    j_times = map_time(SolveModel, j_puzzles)
+    map_time(SolveModel, j_puzzles)
+end
 
-    #TODO make this less awful... ffs NaN NA
+function bench_all(N::Integer)
+    # Note: using pre-calculated arrays so generation is not benchmarked
+    puzzles = [random_sudoku().init for i=1:N]::Vector{ASCIIString}
+
+    times = bench_julia(puzzles)
+    p_times = bench_python(puzzles)
+    j_times = bench_jump(puzzles)
+
+    #TODO make this less awful... ffs NaN NA BS
     arr = hcat(times, j_times, p_times)
-    n = any(map(isnan, arr), 2)
-    @assert n == all(map(isnan, arr), 2)
-    dropped = arr[!collect(n), :]
+    ns = any(map(isnan, arr), 2)
+    if ns != all(map(isnan, arr), 2)
+        println("Inconsistent solutions:")
+        println(puzzles[ns $ all(map(isnan, arr), 2)])
+    end
+    dropped = arr[!collect(ns), :]
 
     df = convert(DataFrame, dropped)
     names!(df, [:Julia, :JuMP, :Python])
     return df
 end
-
-
 
 
 # TODO not use my own bespoke describe function
@@ -73,7 +83,7 @@ end
 
 
 N = (length(ARGS) == 1) ? int(ARGS[1]) : 100
-b = bench_compare(N)
+b = bench_all(N)
 s = impl_describe(b)
 println(s)
 

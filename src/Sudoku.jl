@@ -1,9 +1,9 @@
 module Sudoku
 
-export SudokuPartial, SudokuPuzzle,
+export SudokuPuzzle, sudoku,
        peers, units,
        is_solved, solve, solve_all,
-       random_puzzle,
+       random_sudoku,
        bench
 
 
@@ -11,10 +11,11 @@ import Iterators: chain, imap
 
 # init is the string representation to solve
 type SudokuPuzzle
-    init::String
+    init::ASCIIString
 
     SudokuPuzzle(init::String) = new(_clean(init))
 end
+sudoku(init::String) = SudokuPuzzle(init)
 # vals represents the possible entries (from 1 to 9 in 81 squares)
 # when initiatializing we propogate these values (across units)
 # if vals is false, this means there was a contradition (no solutions).
@@ -23,7 +24,7 @@ type SudokuPartial
     puzzle::SudokuPuzzle
 
     SudokuPartial(puzzle::SudokuPuzzle) = new(_propogate(puzzle), puzzle)
-    SudokuPartial(puzzle::String) = new(_propogate(puzzle), puzzle)
+    SudokuPartial(puzzle::String) = SudokuPartial(SudokuPuzzle(puzzle))
 end
 
 
@@ -45,10 +46,10 @@ end
 # remove values already seen in a shared unit
 # return False if a contradiction is detected.
 function propogate(grid::SudokuPuzzle)
-    SudokuPartial(grid)
+    SudokuPartial(grid.init)
 end
 function propogate(grid::String)
-    propogate_grid(SudokuPuzzle(grid))
+    SudokuPartial(grid)
 end
 function _propogate(grid::SudokuPuzzle)
     # To start, every square can be any digit;
@@ -129,7 +130,7 @@ function solve(grid::SudokuPartial)
     search(grid)
 end
 function solve(grid::SudokuPuzzle)
-    g = SudokuPartial(grid)
+    g = propogate(grid)
     g.vals != false && solve(g)
 end
 function solve(grid::String)
@@ -171,7 +172,7 @@ end
 # Make a random puzzle with N or more assignments. Restart on contradictions.
 # Note the resulting puzzle is not guaranteed to be solvable, but empirically
 # about 99.8% of them are solvable. Some have multiple solutions.
-function random_puzzle(N::Integer=17)
+function random_sudoku(N::Integer=17)
     vals = trues(9, 81)
     digits = [1:9]
     for s=shuffle(collect(squares))
@@ -179,12 +180,15 @@ function random_puzzle(N::Integer=17)
         ds = sum(sum(vals, 1) .== 1)
         # TODO this is different to norvig...
         if ds >= N && ds >= 8
-            return join([sum(vals[:, s])==1 ? string(findfirst(vals[:, s])) : "." for s=squares], "")
+            init = join([sum(vals[:, s])==1 ? string(findfirst(vals[:, s])) : "." for s=squares], "")::ASCIIString
+            return sudoku(init)
         end
     end
-    return random_puzzle(N) ## Give up and make a new puzzle
+    return random_sudoku(N) ## Give up and make a new puzzle
 end
-
+function Base.rand(::Type{SudokuPuzzle}, N::Integer=17)
+    random_sudoku()
+end
 
 # Display puzzles as a 2-D grid.
 function Base.show(io::IO, grid::SudokuPartial)
@@ -208,7 +212,6 @@ function Base.show(io::IO, grid::SudokuPartial)
             println(line)
         end
     end
-    println()
 end
 function Base.show(io::IO, p::SudokuPuzzle)
     line = join(repeat(["-" ^ 5], outer=[3]), "+")
@@ -288,7 +291,7 @@ function bench()
     bench(100, showif=1.0);
 end
 function bench(N::Integer; showif=0.03)
-    solve_all([random_puzzle() for i=1:N], name="random", showif=showif);
+    solve_all([random_sudoku().init for i=1:N], name="random", showif=showif);
 end
 
 end # module
