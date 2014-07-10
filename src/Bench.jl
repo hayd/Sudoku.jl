@@ -54,6 +54,7 @@ function bench_all(N::Integer)
     arr = hcat(times, j_times, p_times)
     ns = any(map(isnan, arr), 2)
     if ns != all(map(isnan, arr), 2)
+        # TODO this is just broken
         println("Inconsistent solutions:")
         println(puzzles[ns $ all(map(isnan, arr), 2)])
     end

@@ -19,12 +19,14 @@ sudoku(init::String) = SudokuPuzzle(init)
 # vals represents the possible entries (from 1 to 9 in 81 squares)
 # when initiatializing we propogate these values (across units)
 # if vals is false, this means there was a contradition (no solutions).
+typealias MaybeVals Union(BitArray{2}, Bool)
 type SudokuPartial
-    vals::Union(BitArray{2}, Bool)
+    vals::MaybeVals
     puzzle::SudokuPuzzle
 
-    SudokuPartial(puzzle::SudokuPuzzle) = new(_propogate(puzzle), puzzle)
-    SudokuPartial(puzzle::String) = SudokuPartial(SudokuPuzzle(puzzle))
+    SudokuPartial(vals::MaybeVals, puzzle::SudokuPuzzle) = new(vals, puzzle)
+    SudokuPartial(puzzle::SudokuPuzzle) = propogate(puzzle)
+    SudokuPartial(puzzle::String) = propogate(SudokuPuzzle(puzzle))
 end
 
 
@@ -36,7 +38,7 @@ const subs = [squares[3*i-2:3*i, 3*j-2:3*j] for i=1:3, j=1:3]
 const unitlist = collect(chain(rows, cols, subs))
 
 # exported globals
-const units = [s::Int64 => filter(u -> s in u, unitlist) for s=squares]
+const units = [filter(u -> s in u, unitlist) for s=squares]
 const peers = [Set(vcat(map(collect, units[s])...))::Set{Int64} for s=squares]
 for (i, p)=enumerate(peers)
     pop!(p, i)
@@ -46,23 +48,23 @@ end
 # remove values already seen in a shared unit
 # return False if a contradiction is detected.
 function propogate(grid::SudokuPuzzle)
-    SudokuPartial(grid.init)
+    vals = trues(9, 81)::MaybeVals
+    if !propogate!(grid, vals)
+        vals = false::MaybeVals
+    end
+    SudokuPartial(vals::MaybeVals, grid)
 end
 function propogate(grid::String)
-    SudokuPartial(grid)
+    propogate(SudokuPuzzle(grid))
 end
-function _propogate(grid::SudokuPuzzle)
+function propogate!(grid::SudokuPuzzle, vals::BitArray{2})
     # To start, every square can be any digit;
     # then assign values from the grid.
-    vals = trues(9, 81)
     for (s,d)=enumerate(grid.init)
         d = d in "0." ? 0 : parseint(d)
-        if d != 0 && assign!(vals, s, d) == false
-            return false ## (Fail if we can't assign d to square s.)
-            # TODO: remove type instability
-        end
+        d != 0 && !assign!(vals, s, d) && return false ## (Fail if we can't assign d to square s.)
     end
-    return vals
+    return true
 end
 # Strip out all but meaningful chars
 function _clean(grid::String)
@@ -78,25 +80,17 @@ function assign!(vals::BitArray{2}, s::Int64, d::Int64)
     other_vals = copy(vals[:, s])
     other_vals[d] = false
 
-    # TODO short-circuit here with something like:
-    # for d2=findin(other_vals, true)
-    #     eliminate!(vals, s, d2) == false && return false
-    # end
-    # vals
-
-    if all([eliminate!(vals, s, d2) != false for d2=findin(other_vals, true)])
-        return vals
-    else
-        return false
-        # TODO: remove type instability
+    for d2=findin(other_vals, true)
+        !eliminate!(vals, s, d2) && return false
     end
+    true
 end
 
-# Eliminate d from values[s]; propagate when values or places <= 2.
-# Return values, except return False if a contradiction is detected.
+# Eliminate d from vals[:, s]; propagate when values or places <= 2.
+# return false if a contradiction is detected.
 function eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
     if !vals[d, s]
-        return vals ## Already eliminated
+        return true ## Already eliminated
     end
     vals[d, s] = false
 
@@ -107,7 +101,7 @@ function eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
     elseif left == 1
         d2 = findfirst(vals[:, s])
         for s2=peers[s]
-            eliminate!(vals, s2, d2) == false && return false
+            !eliminate!(vals, s2, d2) && return false
         end
     end
 
@@ -119,30 +113,28 @@ function eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
             return false ## Contradiction: no place for this value
         elseif L == 1
             # d can only be in one place in unit; assign it there
-            assign!(vals, dplaces[1], d) == false  && return false
+            !assign!(vals, dplaces[1], d) && return false
         end
     end
-    return vals
+    return true
 end
 
 # solve a sudoku puzzle
-function solve(grid::SudokuPartial)
-    search(grid)
-end
-function solve(grid::SudokuPuzzle)
-    g = propogate(grid)
-    g.vals != false && solve(g)
-end
-function solve(grid::String)
-    solve(SudokuPuzzle(grid))
-end
-
-# Using depth-first search and propagation, try all possible values.
-function search(g::SudokuPartial)
-    g.vals = search(g.vals)
+function solve!(g::SudokuPartial)
+    search!(g.vals)
     g
 end
-function search(vals::BitArray{2})
+function solve(p::SudokuPuzzle)
+    g = propogate(p)
+    g.vals != false && solve!(g)
+    g
+end
+function solve(init::String)
+    solve(SudokuPuzzle(init))
+end
+
+# Using depth-first search and propogation, try all possible values.
+function search!(vals::BitArray{2})
     s = 0  # Choose the unfilled square s with the fewest possibilities
     min_l = 99
     all_one = true
@@ -154,12 +146,14 @@ function search(vals::BitArray{2})
             s = i
         end
     end
-    all_one && return vals  ## Solved
+    all_one && return true  ## Solved
     
     for d=findin(vals[:, s], true)
-        v = assign!(copy(vals), s, d)
-        v = (v != false) && search(v)
-        (v != false) && return v
+        v = copy(vals)
+        if assign!(v, s, d) && search!(v)
+            vals[:] = v
+            return true
+        end
     end
     return false
 end
@@ -181,7 +175,7 @@ function random_sudoku(N::Integer=17)
         # TODO this is different to norvig...
         if ds >= N && ds >= 8
             init = join([sum(vals[:, s])==1 ? string(findfirst(vals[:, s])) : "." for s=squares], "")::ASCIIString
-            return sudoku(init)
+            return SudokuPuzzle(init)
         end
     end
     return random_sudoku(N) ## Give up and make a new puzzle

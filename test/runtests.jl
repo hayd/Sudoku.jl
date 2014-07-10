@@ -29,6 +29,6 @@ solve(grid1) # warm up
 solve_all([grid1, grid2, hard1, vhard1, vhard2], name="test", showif=0.3)
 
 bad1 = "003020600900305001001806400008102900700000008006708200002609500800203009005010303"
-@test solve(bad1) == false
+@test solve(bad1).vals == false
 
 bench()
