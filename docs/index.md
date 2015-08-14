@@ -2,8 +2,6 @@
 
 A port of Peter Norvig's *["Solving Every Sudoku Puzzle"](http://norvig.com/sudoku.html)* to [Julia](http://julialang.org/).
 
-[![Build Status](https://travis-ci.org/hayd/Sudoku.jl.svg?branch=master)](https://travis-ci.org/hayd/Sudoku.jl)
-
 You can create a `SudokuPuzzle` from a string input, using the `sudoku` method.
 
 ```jl
@@ -89,4 +87,3 @@ and the [Sudoku solver using JuMP](https://github.com/JuliaOpt/JuMP.jl/blob/mast
 Benchmark the performance against Python and Jump using `Bench.jl`, this is
 around twice as fast as Python and ten times the speed of JuMP. Please try it
 yourself!
-

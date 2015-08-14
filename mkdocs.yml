@@ -1,0 +1,17 @@
+site_name: Sudoku.jl
+site_author: Andy Hayden
+repo_url: https://github.com/hayd/Sudoku.jl/
+theme: readthedocs
+docs_dir: 'docs/_generated'
+markdown_extensions:
+  - extra
+  - tables
+  - fenced_code
+extra_css:
+  - Lexicon.css
+extra_javascript:
+  - https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML
+  - mathjaxhelper.js
+pages:
+    - "Home": 'index.md'
+    - "API": 'api.md'
