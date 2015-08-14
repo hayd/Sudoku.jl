@@ -1,10 +1,9 @@
 module Sudoku
 
-export SudokuPuzzle, sudoku,
-       peers, units,
+export sudoku, propagate,
        is_solved, solve, solve_all,
        random_sudoku,
-       bench
+       bench, from_file, time_solve
 
 using Compat
 import Iterators: chain, imap
@@ -13,12 +12,32 @@ import Iterators: chain, imap
 type SudokuPuzzle
     init::ASCIIString
 
-    SudokuPuzzle(init::String) = new(_clean(init))
+    SudokuPuzzle(init::AbstractString) = new(_clean(init))
 end
-sudoku(init::String) = SudokuPuzzle(init)
+
+"""
+Create a `SudokuPuzzle` from a string, for example:
+
+    julia> sudoku("003020600900305001001806400008102900700000008006708200002609500800203009005010300")
+        3|  2  |6
+    9    |3   5|    1
+        1|8   6|4
+    -----+-----+-----
+        8|1   2|9
+    7    |     |    8
+        6|7   8|2
+    -----+-----+-----
+        2|6   9|5
+    8    |2   3|    9
+        5|  1  |3
+
+"""
+sudoku(init::AbstractString) = SudokuPuzzle(init)
+
 # vals represents the possible entries (from 1 to 9 in 81 squares)
 # when initiatializing we propagate these values (across units)
 # if vals is false, this means there was a contradition (no solutions).
+# TODO use Nullable to do this.
 typealias MaybeVals Union(BitArray{2}, Bool)
 type SudokuPartial
     vals::MaybeVals
@@ -31,6 +50,8 @@ end
 
 
 # globals
+# TODO could this be a type e.g. SudokuBoard{9}.
+# i.e. attributes: squares, rows, cols, subs, unitlist, units and peers. 
 const squares = reshape(1:81, 9, 9).'
 const rows = [squares[i, :] for i in 1:9]
 const cols = [squares[:, i] for i in 1:9]
@@ -44,9 +65,12 @@ for (i, p)=enumerate(peers)
     pop!(p, i)
 end
 
-# Convert grid to a SudokuPartial of possible values, vals is a BitArray{2}
-# remove values already seen in a shared unit
-# return False if a contradiction is detected.
+"""
+Convert grid to a `SudokuPartial` of possible values, `vals` is a `BitArray{2}`
+remove values already seen in a shared unit
+
+Returns `false` if a contradiction is detected.
+"""
 function propagate(grid::SudokuPuzzle)
     vals = trues(9, 81)::MaybeVals
     if !propagate!(grid, vals)
@@ -66,7 +90,8 @@ function propagate!(grid::SudokuPuzzle, vals::BitArray{2})
     end
     return true
 end
-# Strip out all but meaningful chars
+
+"""Strip out all but meaningful chars, that is ".0123456789"."""
 function _clean(grid::String)
     chars = filter(c -> c in ".0123456789", grid)
     @assert length(chars) == 81
@@ -74,8 +99,11 @@ function _clean(grid::String)
 end
 
 
-# Eliminate all the other values (except d) from vals[:, s] and propagate.
-# Return values, except return False if a contradiction is detected.
+"""
+Eliminate all the other values (except d) from `vals[:, s]` and propagate.
+
+Returns values, or `false` if a contradiction is detected.
+"""
 function assign!(vals::BitArray{2}, s::Int64, d::Int64)
     other_vals = copy(vals[:, s])
     other_vals[d] = false
@@ -86,8 +114,10 @@ function assign!(vals::BitArray{2}, s::Int64, d::Int64)
     true
 end
 
-# Eliminate d from vals[:, s]; propagate when values or places <= 2.
-# return false if a contradiction is detected.
+"""
+Eliminate `d` from `vals[:, s]`; propagate when values or places <= 2.
+Returns `false` if a contradiction is detected.
+""" 
 function eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
     if !vals[d, s]
         return true ## Already eliminated
@@ -119,7 +149,6 @@ function eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
     return true
 end
 
-# solve a sudoku puzzle
 function solve!(g::SudokuPartial)
     search!(g.vals)
     g
@@ -129,11 +158,13 @@ function solve(p::SudokuPuzzle)
     g.vals != false && solve!(g)
     g
 end
+
+"""Solve a sudoku puzzle."""
 function solve(init::String)
     solve(SudokuPuzzle(init))
 end
 
-# Using depth-first search and propogation, try all possible values.
+"""Using depth-first search and propogation, try all possible values."""
 function search!(vals::BitArray{2})
     s = 0  # Choose the unfilled square s with the fewest possibilities
     min_l = 99
@@ -158,17 +189,20 @@ function search!(vals::BitArray{2})
     return false
 end
 
+"""Returns `true` if the grid is completely filled in."""
 function is_solved(grid::SudokuPartial)
     grid.vals != false && all(sum(grid.vals, 1) .== 1)
 end
 
 
-# Make a random puzzle with N or more assignments. Restart on contradictions.
-# Note the resulting puzzle is not guaranteed to be solvable, but empirically
-# about 99.8% of them are solvable. Some have multiple solutions.
+"""Make a random puzzle with N or more assignments. Restart on contradictions.
+
+Note the resulting puzzle is not guaranteed to be solvable, but empirically
+about 99.8% of them are solvable. Some have multiple solutions.
+"""
 function random_sudoku(N::Integer=17)
     vals = trues(9, 81)
-    digits = [1:9]
+    digits = collect(1:9)
     for s=shuffle(collect(squares))
         assign!(vals, s, digits[rand(1:end)]) == false  && break
         ds = sum(sum(vals, 1) .== 1)
@@ -184,11 +218,11 @@ function Base.rand(::Type{SudokuPuzzle}, N::Integer=17)
     random_sudoku()
 end
 
-# Display puzzles as a 2-D grid.
+"""Display puzzles as a 2-D grid."""
 function Base.show(io::IO, grid::SudokuPartial)
     if grid.vals == false
-        print(grid.puzzle)
-        println("Has no solutions.")
+        print(io, grid.puzzle)
+        println(io, "Has no solutions.")
         return nothing
     end
 
@@ -199,11 +233,11 @@ function Base.show(io::IO, grid::SudokuPartial)
     width = 1 + maximum([sum(grid.vals[:, s]) for s=squares])
     line = join(repeat(["-" ^ (width*3)], outer=[3]), "+")
     for (i,row)=enumerate(rows)
-        println(join([center(to_digits(grid.vals[:, s]), width) * (j in [3, 6] ? "|" : "")
-                      for (j,s)=enumerate(row)],
-                     ""))
+        println(io, join([center(to_digits(grid.vals[:, s]), width) * (j in [3, 6] ? "|" : "")
+                          for (j,s)=enumerate(row)],
+                         ""))
         if i in [3, 6]
-            println(line)
+            println(io, line)
         end
     end
 end
@@ -211,11 +245,17 @@ function Base.show(io::IO, p::SudokuPuzzle)
     line = join(repeat(["-" ^ 5], outer=[3]), "+")
     for (s,c)=enumerate(p.init)
         c = c in ".0" ? ' ': c
-        print("$c" * (rem(s, 9) in [3, 6] ? "|" : " "))
-        rem(s, 9) == 0 && println()
-        s in [27, 54] && println(line)
+        print(io, "$c" * (rem(s, 9) in [3, 6] ? "|" : " "))
+        rem(s, 9) == 0 && println(io)
+        s in [27, 54] && println(io, line)
     end
 end
+
+"""Returns a representative string of the solved (or partial state) of the
+puzzle.
+
+That is, 81 digits representing the filled value in each square.
+"""
 function Base.string(p::SudokuPuzzle)
     p.init
 end
@@ -227,7 +267,7 @@ function Base.string(p::SudokuPartial)
     end
 end
 
-# pad string with spaces so it's centered on size width
+"""pad string with spaces so it's centered on size width"""
 function center(text, width)
     pad = width - length(text)
     @assert pad >= 0
@@ -237,13 +277,20 @@ function center(text, width)
 end
 
 
-# Parse a file into a list of strings, separated by sep.
+"""Parse a file into a list of strings, separated by sep."""
 function from_file(filename, sep='\n')
     open(filename) do f
         return split(strip(readall(f)), sep)
     end
 end
 
+"""Time how long it takes to solve `grid`.
+
+If it takes longer than `showif` seconds to solve, print `grid` and whether or
+not it has been solved.
+
+This is useful for finding "difficult" random puzzles.
+"""
 function time_solve(grid, showif)
     t0 = time()
     val = solve(grid)
@@ -251,14 +298,20 @@ function time_solve(grid, showif)
     if t > showif
         println("$(round(t, 2)) seconds:")
         println(grid)
-        val == false ? println("No solutions.") : show(val)
+        if val == false
+            println("No solutions.")
+        end
+        # Note: could print "Solved." or show(val) if solved.
     end
     solved = val != false && is_solved(val)
     t, solved
 end
 
-# Attempt to solve a sequence of grids. Report results.
-# When showif is a number of seconds, display puzzles that take longer.
+"""Attempt to solve a sequence of grids. Report results.
+
+Display the puzzles that take longer than `showif` seconds to solve, see
+`time_solve`.
+"""
 function solve_all(grids; name="", showif=0.1)
     ts = map(x -> time_solve(x, showif), grids)
     times, results = zip(filter(x -> x[2] != false, ts)...)
@@ -273,12 +326,20 @@ end
 
 grid1 = "003020600900305001001806400008102900700000008006708200002609500800203009005010300"
 
-# Benchmarking
+"""Benchmarking: Solve some some example puzzles:
+
+- easy (from easy.txt)
+- hard (from top95.txt)
+- hardest (from hardest.txt)
+- 100 random puzzles.
+"""
 function bench()
     examples = joinpath(splitdir(dirname(@__FILE__()))[1], "examples")
 
     solve(grid1)  #warm up
 
+    # TODO tweak the showifs so output is less verbose.
+    # ...or make stuff faster.
     solve_all(from_file(joinpath(examples, "easy50.txt"), "========"), name="easy")
     solve_all(from_file(joinpath(examples, "top95.txt")), name="hard")
     solve_all(from_file(joinpath(examples, "hardest.txt")), name="hardest")
