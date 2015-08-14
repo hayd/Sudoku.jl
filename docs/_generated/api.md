@@ -7,10 +7,6 @@ sudoku puzzles:
 ## Construcing sudoku puzzles
 
 ### sudoku
-```
-1  sudoku(init::AbstractString)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L35)*.
 
 Create a `SudokuPuzzle` from a string, for example:
 
@@ -29,86 +25,94 @@ julia> sudoku("00302060090030500100180640000810290070000000800670820000260950080
     5|  1  |3
 ```
 
+```
+1  sudoku(init::AbstractString)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L35)*.
+
 ### from_file
+
+Parse a file into a list of strings, separated by sep.
+
 ```
 1  from_file(filename)
 2  from_file(filename, sep)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L282) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L282)*.
-
-Parse a file into a list of strings, separated by sep.
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L282) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L282)*.
 
 ### show
+
+Display puzzles as a 2-D grid.
+
 ```
 1  show(io::IO, grid::Sudoku.SudokuPartial)
 2  show(io::IO, p::Sudoku.SudokuPuzzle)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L223) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L245)*.
-
-Display puzzles as a 2-D grid.
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L223) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L245)*.
 
 
 
 ## Solving puzzles
 
 ### propagate
-```
-1  propagate(grid::Sudoku.SudokuPuzzle)
-2  propagate(grid::AbstractString)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L75) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L82)*.
 
 Convert grid to a `SudokuPartial` of possible values, `vals` is a `BitArray{2}` remove values already seen in a shared unit
 
 Returns `false` if a contradiction is detected.
 
+```
+1  propagate(grid::Sudoku.SudokuPuzzle)
+2  propagate(grid::AbstractString)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L75) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L82)*.
+
 ### solve
+
+Solve a sudoku puzzle.
+
 ```
 1  solve(p::Sudoku.SudokuPuzzle)
 2  solve(init::AbstractString)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L157) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L164)*.
-
-Solve a sudoku puzzle.
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L157) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L164)*.
 
 ### solve_all
-```
-1  solve_all(grids)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L316)*.
 
 Attempt to solve a sequence of grids. Report results.
 
 Display the puzzles that take longer than `showif` seconds to solve, see `time_solve`.
 
+```
+1  solve_all(grids)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L316)*.
+
 ### is_solved
+
+Returns `true` if the grid is completely filled in.
+
 ```
 1  is_solved(grid::Sudoku.SudokuPartial)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L194)*.
-
-Returns `true` if the grid is completely filled in.
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L194)*.
 
 
 
 ## Creating random puzzles and testing performance
 
 ### random_sudoku
-```
-1  random_sudoku()
-2  random_sudoku(N::Integer)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L204) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L204)*.
 
 Make a random puzzle with N or more assignments. Restart on contradictions.
 
 Note the resulting puzzle is not guaranteed to be solvable, but empirically about 99.8% of them are solvable. Some have multiple solutions.
 
+```
+1  random_sudoku()
+2  random_sudoku(N::Integer)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L204) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L204)*.
+
 ### time_solve
-```
-1  time_solve(grid, showif)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L295)*.
 
 Time how long it takes to solve `grid`.
 
@@ -116,12 +120,12 @@ If it takes longer than `showif` seconds to solve, print `grid` and whether or n
 
 This is useful for finding "difficult" random puzzles.
 
+```
+1  time_solve(grid, showif)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L295)*.
+
 ### bench
-```
-1  bench()
-2  bench(N::Integer)
-```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L337) [2](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L349)*.
 
 Benchmarking: Solve some some example puzzles:
 
@@ -130,6 +134,12 @@ Benchmarking: Solve some some example puzzles:
   * hardest (from hardest.txt)
   * 100 random puzzles.
 
+```
+1  bench()
+2  bench(N::Integer)
+```
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L337) [2](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L349)*.
+
 
 
 ## Internal
@@ -137,25 +147,33 @@ Benchmarking: Solve some some example puzzles:
 Internally the following functions do the searching and propogation:
 
 ### search!
+
+Using depth-first search and propogation, try all possible values.
+
 ```
 1  search!(vals::BitArray{2})
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L169)*.
-
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L169)*.
 
 ### eliminate!
+
+Eliminate `d` from `vals[:, s]`; propagate when values or places <= 2. Returns `false` if a contradiction is detected.
+
 ```
 1  eliminate!(vals::BitArray{2}, s::Int64, d::Int64)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L122)*.
-
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L122)*.
 
 ### assign!
+
+Eliminate all the other values (except d) from `vals[:, s]` and propagate.
+
+Returns values, or `false` if a contradiction is detected.
+
 ```
 1  assign!(vals::BitArray{2}, s::Int64, d::Int64)
 ```
-*Source: [1](https://github.com/hayd/Sudoku.jl/tree/33093bb5b1f53e198f5a4043f6a46a9cfbb5dc43/src/Sudoku.jl#L108)*.
-
+*Source: [1](https://github.com/hayd/Sudoku.jl/tree/821bcab1cfa53ab96b137ceb61e5d09a1cc2ce61/src/Sudoku.jl#L108)*.
 
 
 
