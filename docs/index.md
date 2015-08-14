@@ -1,5 +1,3 @@
-# Sudoku.jl
-
 A port of Peter Norvig's *["Solving Every Sudoku Puzzle"](http://norvig.com/sudoku.html)* to [Julia](http://julialang.org/).
 
 You can create a `SudokuPuzzle` from a string input, using the `sudoku` method.

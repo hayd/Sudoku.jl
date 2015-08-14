@@ -1,5 +1,3 @@
-# API
-
 Sudoku.jl provides the following methods for solving and displaying
 sudoku puzzles:
 
