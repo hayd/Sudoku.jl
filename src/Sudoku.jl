@@ -6,7 +6,7 @@ export SudokuPuzzle, sudoku,
        random_sudoku,
        bench
 
-
+using Compat
 import Iterators: chain, imap
 
 # init is the string representation to solve
@@ -61,7 +61,7 @@ function propagate!(grid::SudokuPuzzle, vals::BitArray{2})
     # To start, every square can be any digit;
     # then assign values from the grid.
     for (s,d)=enumerate(grid.init)
-        d = d in "0." ? 0 : parseint(d)
+        d = d in "0." ? 0 : @compat parse(Int, d)
         d != 0 && !assign!(vals, s, d) && return false ## (Fail if we can't assign d to square s.)
     end
     return true
